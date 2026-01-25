@@ -24,9 +24,13 @@ def main():
         logger.error("BOT_TOKEN and CHANNEL_ID environment variables are required.")
         return
 
+    # Determine path to history.json (in the parent directory of src)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    history_file = os.path.join(base_dir, 'history.json')
+    
     # Initialize modules
     scraper = InternshalaScraper()
-    storage = StorageManager(file_path='history.json')
+    storage = StorageManager(file_path=history_file)
     bot = TelegramBot(bot_token, channel_id)
 
     # Scrape

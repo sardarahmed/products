@@ -36,6 +36,8 @@ class TelegramBot:
             logger.info("Message sent successfully.")
         except requests.exceptions.HTTPError as e:
             logger.error(f"Failed to send message: {e.response.text}")
+            if "chat not found" in e.response.text:
+                logger.error("Double-check: 1. Did you add the bot to the channel? 2. Is the bot an Admin? 3. Is the CHANNEL_ID correct?")
         except Exception as e:
             logger.error(f"Error sending message: {e}")
 
