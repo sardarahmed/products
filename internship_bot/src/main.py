@@ -59,17 +59,18 @@ def main():
 
     interleaved = [item for items in itertools.zip_longest(*scraped_data) for item in items if item is not None]
     
-    # Filter by date (Recent 3 days) to ensure availability
+    # Filter by date (Recent 30 days) - User allows old posted dates if available
     filtered_internships = []
     skipped_count = 0
     for i in interleaved:
         date_str = i.get('date', '')
-        # Strict 3-day window
-        if is_recent(date_str, days=3):
+        # Relaxed 30-day window to allow older but active posts
+        # Most "live" lists on these sites are active.
+        if is_recent(date_str, days=30):
             filtered_internships.append(i)
         else:
             skipped_count += 1
-            # logger.info(f"Skipping old post: {i['title']} ({date_str})")
+            # logger.info(f"Skipping very old post: {i['title']} ({date_str})")
 
     logger.info(f"Total unique recent internships: {len(filtered_internships)} (Skipped {skipped_count} old/unknown)")
     
