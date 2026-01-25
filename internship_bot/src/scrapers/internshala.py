@@ -63,6 +63,10 @@ class InternshalaScraper(BaseScraper):
 
                     stipend_elem = internship.find('span', class_='stipend')
                     stipend = stipend_elem.get_text(strip=True) if stipend_elem else "N/A"
+                    
+                    # Try to find start date or posted text, but Internshala listing often omits "Posted on"
+                    # We'll default to "Freshly Posted" for scraped items
+                    date = "Freshly Posted" 
 
                     if link:
                         full_link = f"https://internshala.com{link}" if link.startswith('/') else link
@@ -73,7 +77,8 @@ class InternshalaScraper(BaseScraper):
                                 'location': location,
                                 'link': full_link,
                                 'stipend': stipend,
-                                'source': 'Internshala'
+                                'source': 'Internshala',
+                                'date': date
                             })
                 except Exception as inner_e:
                     continue

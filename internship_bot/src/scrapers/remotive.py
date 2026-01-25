@@ -30,6 +30,7 @@ class RemotiveScraper(BaseScraper):
                 location = job.get('candidate_required_location', 'Remote')
                 link = job.get('url')
                 salary = job.get('salary', 'N/A')
+                date_posted = job.get('publication_date', '')[:10] # YYYY-MM-DD
                 
                 if link:
                     results.append({
@@ -38,7 +39,8 @@ class RemotiveScraper(BaseScraper):
                         'location': location,
                         'link': link,
                         'stipend': salary if salary else "N/A",
-                        'source': 'Remotive'
+                        'source': 'Remotive',
+                        'date': date_posted
                     })
                     
         except Exception as e:
