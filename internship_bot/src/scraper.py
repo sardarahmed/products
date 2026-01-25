@@ -1,13 +1,19 @@
 
+import requests
+from bs4 import BeautifulSoup
 import logging
-from typing import List, Dict
-from playwright.sync_api import sync_playwright
+from typing import List, Dict, Optional
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class InternshipScraper:
+    def __init__(self):
+         self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+
     def scrape(self) -> List[Dict]:
         """
         Main method to scrape internships.
@@ -15,70 +21,76 @@ class InternshipScraper:
         return []
 
 class InternshalaScraper(InternshipScraper):
-
     def scrape(self) -> List[Dict]:
-        url = "https://internshala.com/internships/"
-        logger.info(f"Scraping {url} with Playwright...")
+        url = "https://internshala.com/internships/computer-science-internship/"
+        logger.info(f"Scraping {url} with Request...")
         results = []
         
         try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
-                page.set_viewport_size({"width": 1280, "height": 720})
-                
-                page.goto(url)
-                page.wait_for_load_state("networkidle")
-                
-                page.screenshot(path="debug_screenshot.png")
-                logger.info(f"Page title: {page.title()}")
-                
-                # Robust strategy: Find all internship containers by looking for 'internship_meta' or specific link patterns
-                # Based on previous robust findings, we look for anchor tags with detail links if classes fail
-                
-                container_selector = '.individual_internship'
-                if page.query_selector(container_selector):
-                    logger.info(f"Found containers with selector: {container_selector}")
-                else:
-                    logger.warning(f"Selector {container_selector} not found. Trying fallback.")
-                    # Fallback: finding all divs that look like containers (e.g. have a unique ID starting with individual_internship)
-                    container_selector = 'div[id^="individual_internship_"]'
-                
-                internships = page.query_selector_all(container_selector)
-                logger.info(f"Found {len(internships)} potential internship elements.")
-                
-                for internship in internships:
-                    try:
-                        # Extract details
-                        title_elem = internship.query_selector('h3') or internship.query_selector('.profile')
-                        company_elem = internship.query_selector('.company_name') or internship.query_selector('.link_display_like_text')
-                        location_elem = internship.query_selector('.location_link') or internship.query_selector('a.location_link')
-                        
-                        # Link
-                        link = internship.get_attribute('data-href')
-                        if not link:
-                            # Try to find the title link
-                            if title_elem:
-                                parent_a = title_elem.query_selector('xpath=..') # parent if title is inside a
-                                if parent_a and parent_a.get_attribute('href'):
-                                    link = parent_a.get_attribute('href')
-                        
-                        if not link:
-                             # Try any link inside
-                             any_link = internship.query_selector('a')
-                             if any_link: link = any_link.get_attribute('href')
+            response = requests.get(url, headers=self.headers, timeout=15)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Internshala structure variations
+            # 1. Standard containers
+            internships = soup.find_all('div', class_='individual_internship')
+            if not internships:
+                 # 2. Dynamic ID containers
+                 internships = soup.find_all('div', id=lambda x: x and x.startswith('individual_internship_'))
 
-                        # Stipend
-                        stipend_elem = internship.query_selector('.stipend')
+            logger.info(f"Found {len(internships)} potential internship elements.")
+
+            for internship in internships:
+                try:
+                    # Title
+                    title_elem = internship.find('h3', class_='heading_4_5') or internship.find('div', class_='heading_4_5') or internship.find('a', class_='heading_4_5') or internship.find('h3')
+                    
+                    # Company
+                    company_elem = internship.find('h4', class_='heading_6_company') or internship.find('div', class_='company_name') or internship.find('a', class_='link_display_like_text') or internship.find('div', class_='company_name') 
+                    
+                    # Location
+                    location_elem = internship.find('a', class_='location_link') or internship.find('span', class_='location_link') or internship.find('div', id='location_names')
+                    
+                    # Link
+                    link_elem = internship.get('data-href')
+                    
+                    # Check partial requirement
+                    # Note: Sometimes title/company are missing in ad blocks inside list
+                    if not title_elem and not company_elem:
+                        continue
                         
-                        title = title_elem.inner_text().strip() if title_elem else "Unknown Title"
-                        company = company_elem.inner_text().strip() if company_elem else "Unknown Company"
-                        location = location_elem.inner_text().strip() if location_elem else "Remote/Unspecified"
-                        stipend = stipend_elem.inner_text().strip() if stipend_elem else "N/A"
-                        
-                        if link and "/internship/detail/" in link:
-                            full_link = f"https://internshala.com{link}" if link.startswith('/') else link
-                            
+                    title = title_elem.get_text(strip=True) if title_elem else "Unknown Title"
+                    company = company_elem.get_text(strip=True) if company_elem else "Unknown Company"
+                    location = location_elem.get_text(strip=True) if location_elem else "Remote/Unspecified"
+                    
+                    link = None
+                    if link_elem:
+                        link = link_elem
+                    else:
+                        # Try to find a link inside title or surrounding anchor
+                         # Often the title is an anchor or inside one
+                         if title_elem and title_elem.name == 'a':
+                             link = title_elem.get('href')
+                         elif title_elem:
+                             a_tag = title_elem.find_parent('a')
+                             if a_tag: link = a_tag.get('href')
+                    
+                    # Fallback for link
+                    if not link:
+                         a_tags = internship.find_all('a')
+                         for a in a_tags:
+                             h = a.get('href')
+                             if h and '/internship/detail/' in h:
+                                 link = h
+                                 break
+
+                    # Stipend
+                    stipend_elem = internship.find('span', class_='stipend')
+                    stipend = stipend_elem.get_text(strip=True) if stipend_elem else "N/A"
+
+                    if link:
+                        full_link = f"https://internshala.com{link}" if link.startswith('/') else link
+                        if "/internship/detail/" in full_link: # Ensure it is a valid detail link
                             results.append({
                                 'title': title,
                                 'company': company,
@@ -87,12 +99,10 @@ class InternshalaScraper(InternshipScraper):
                                 'stipend': stipend,
                                 'source': 'Internshala'
                             })
-                                
-                    except Exception as inner_e:
-                        continue
-                        
-                browser.close()
-                
+                except Exception as inner_e:
+                    logger.debug(f"Failed to parse an internship item: {inner_e}")
+                    continue
+                    
         except Exception as e:
             logger.error(f"Internshala scraping failed: {e}")
             

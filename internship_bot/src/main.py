@@ -35,23 +35,34 @@ def main():
     logger.info(f"Scraped {len(internships)} internships.")
 
     new_count = 0
+    max_posts = 10
+    
     for internship in internships:
+        if new_count >= max_posts:
+            logger.info(f"Reached limit of {max_posts} posts per run.")
+            break
+
         link = internship.get('link')
         if not link:
             continue
 
         if storage.is_new(link):
-            new_count += 1
             logger.info(f"New internship found: {internship['title']} at {internship['company']}")
             
             if not args.dry_run:
+                # message = bot.format_internship(internship)
+                # bot.send_message(message)
+                # Updated main call signature matches new bot method
                 message = bot.format_internship(internship)
-                bot.send_message(message)
+                bot.send_message(message, link=link)
+                
                 storage.add(link)
+                new_count += 1
                 # Sleep to avoid hitting rate limits
                 time.sleep(3)
             else:
                 logger.info("[Dry Run] Would send message and save to history.")
+                new_count += 1
 
     if not args.dry_run:
         storage.save_history()
