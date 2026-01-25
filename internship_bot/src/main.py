@@ -4,7 +4,7 @@ import argparse
 import time
 import logging
 import random
-from scrapers import InternshalaScraper, RemotiveScraper, RSSScraper
+from scrapers import InternshalaScraper, RemotiveScraper, RSSScraper, LinkedInScraper
 from storage import StorageManager
 from bot import TelegramBot
 
@@ -35,6 +35,7 @@ def main():
 
     # Initialize Scrapers
     scrapers = [
+        LinkedInScraper(), # Prioritized as per user request
         InternshalaScraper(),
         RemotiveScraper(),
         RSSScraper(url="https://weworkremotely.com/categories/remote-programming-jobs.rss", source_name="WeWorkRemotely"),
