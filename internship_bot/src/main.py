@@ -59,12 +59,13 @@ def main():
 
     interleaved = [item for items in itertools.zip_longest(*scraped_data) for item in items if item is not None]
     
-    # Filter by date (Recent 7 days)
+    # Filter by date (Recent 3 days) to ensure availability
     filtered_internships = []
     skipped_count = 0
     for i in interleaved:
         date_str = i.get('date', '')
-        if is_recent(date_str, days=7):
+        # Strict 3-day window
+        if is_recent(date_str, days=3):
             filtered_internships.append(i)
         else:
             skipped_count += 1

@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 class LinkedInScraper(BaseScraper):
     def scrape(self) -> List[Dict]:
-        # Search for: Computer Science Intern, Worldwide, Past Week
-        url = "https://www.linkedin.com/jobs/search?keywords=Computer%20Science%20Intern&location=Worldwide&f_TPR=r604800&position=1&pageNum=0"
+        # Search for: Computer Science Intern, Worldwide, Past 24 Hours
+        url = "https://www.linkedin.com/jobs/search?keywords=Computer%20Science%20Intern&location=Worldwide&f_TPR=r86400&position=1&pageNum=0"
         logger.info(f"Scraping {url}...")
         results = []
         
