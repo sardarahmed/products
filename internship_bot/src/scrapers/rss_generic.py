@@ -48,7 +48,7 @@ class RSSScraper(BaseScraper):
                     'link': link,
                     'stipend': "See details",
                     'source': self.source_name,
-                    'date': pubDate[:16] # Truncate time
+                    'date': pubDate # Return full string for parsing
                 })
                     
         except Exception as e:

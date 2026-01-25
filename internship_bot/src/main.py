@@ -54,17 +54,27 @@ def main():
 
     # Round-robin interleave
     import itertools
-    all_internships = [item for items in itertools.zip_longest(*scraped_data) for item in items if item is not None]
+    from utils import is_recent # Import here or top level
 
-    logger.info(f"Total unique internships found: {len(all_internships)}")
+    interleaved = [item for items in itertools.zip_longest(*scraped_data) for item in items if item is not None]
     
-    # Optional: shuffle slightly or prioritize specific sources? 
-    # Round-robin is fair.
+    # Filter by date (Recent 7 days)
+    filtered_internships = []
+    skipped_count = 0
+    for i in interleaved:
+        date_str = i.get('date', '')
+        if is_recent(date_str, days=7):
+            filtered_internships.append(i)
+        else:
+            skipped_count += 1
+            # logger.info(f"Skipping old post: {i['title']} ({date_str})")
+
+    logger.info(f"Total unique recent internships: {len(filtered_internships)} (Skipped {skipped_count} old/unknown)")
     
     new_count = 0
     max_posts = 5  # UPDATED LIMIT
     
-    for internship in all_internships:
+    for internship in filtered_internships:
         if new_count >= max_posts:
             logger.info(f"Reached limit of {max_posts} posts per run.")
             break
