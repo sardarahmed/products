@@ -41,22 +41,26 @@ def main():
         RSSScraper(url="https://stackoverflow.com/jobs/feed", source_name="StackOverflow") 
     ]
 
-    all_internships = []
-    
-    # Run all scrapers
+    # Run all scrapers and collect results by source
+    scraped_data = [] # List of lists
     for scraper in scrapers:
         try:
             results = scraper.scrape()
-            all_internships.extend(results)
+            if results:
+                scraped_data.append(results)
+                logger.info(f"{scraper.__class__.__name__}: Found {len(results)} items")
         except Exception as e:
             logger.error(f"Scraper {scraper.__class__.__name__} failed: {e}")
 
-    logger.info(f"Total internships found: {len(all_internships)}")
+    # Round-robin interleave
+    import itertools
+    all_internships = [item for items in itertools.zip_longest(*scraped_data) for item in items if item is not None]
 
-    # Shuffle to mix sources if desired, or keep as is. 
-    # Let's shuffle to give fair chance if one source dominates
-    # random.shuffle(all_internships)
-
+    logger.info(f"Total unique internships found: {len(all_internships)}")
+    
+    # Optional: shuffle slightly or prioritize specific sources? 
+    # Round-robin is fair.
+    
     new_count = 0
     max_posts = 5  # UPDATED LIMIT
     
