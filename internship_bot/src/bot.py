@@ -49,14 +49,16 @@ class TelegramBot:
         company = internship.get('company', 'N/A')
         location = internship.get('location', 'N/A')
         stipend = internship.get('stipend', 'N/A')
-        # Link is handled by the inline keyboard now
+        source = internship.get('source', 'Web')
         
+        # SEO / Keywords formatting
         return (
-            f"⚡ <b>New Opportunity in Tech!</b>\n\n"
-            f"💼 <b>Role:</b> {title}\n"
+            f"🚀 <b>Fresh Internship Alert!</b>\n\n"
+            f"👨‍💻 <b>Role:</b> {title}\n"
             f"🏢 <b>Company:</b> {company}\n"
             f"📍 <b>Location:</b> {location}\n"
-            f"💰 <b>Stipend:</b> {stipend}\n"
-            f"⏳ <b>Duration:</b> Check details\n\n"
-            f"<i>#ComputerScience #Internship #Hiring</i>"
+            f"💵 <b>Stipend:</b> {stipend}\n"
+            f"🌐 <b>Source:</b> {source}\n\n"
+            f"👇 <b>Apply Now:</b>\n"
+            f"<i>Don't miss out! #Internship #ComputerScience #{source.replace(' ', '')} #Hiring #RemoteWork #TechJobs</i>"
         )

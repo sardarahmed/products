@@ -3,7 +3,8 @@ import os
 import argparse
 import time
 import logging
-from scraper import InternshalaScraper
+import random
+from scrapers import InternshalaScraper, RemotiveScraper
 from storage import StorageManager
 from bot import TelegramBot
 
@@ -29,19 +30,35 @@ def main():
     history_file = os.path.join(base_dir, 'history.json')
     
     # Initialize modules
-    scraper = InternshalaScraper()
     storage = StorageManager(file_path=history_file)
     bot = TelegramBot(bot_token, channel_id)
 
-    # Scrape
-    logger.info("Starting scrape job...")
-    internships = scraper.scrape()
-    logger.info(f"Scraped {len(internships)} internships.")
+    # Initialize Scrapers
+    scrapers = [
+        InternshalaScraper(),
+        RemotiveScraper()
+    ]
+
+    all_internships = []
+    
+    # Run all scrapers
+    for scraper in scrapers:
+        try:
+            results = scraper.scrape()
+            all_internships.extend(results)
+        except Exception as e:
+            logger.error(f"Scraper {scraper.__class__.__name__} failed: {e}")
+
+    logger.info(f"Total internships found: {len(all_internships)}")
+
+    # Shuffle to mix sources if desired, or keep as is. 
+    # Let's shuffle to give fair chance if one source dominates
+    # random.shuffle(all_internships)
 
     new_count = 0
-    max_posts = 10
+    max_posts = 5  # UPDATED LIMIT
     
-    for internship in internships:
+    for internship in all_internships:
         if new_count >= max_posts:
             logger.info(f"Reached limit of {max_posts} posts per run.")
             break
@@ -54,9 +71,6 @@ def main():
             logger.info(f"New internship found: {internship['title']} at {internship['company']}")
             
             if not args.dry_run:
-                # message = bot.format_internship(internship)
-                # bot.send_message(message)
-                # Updated main call signature matches new bot method
                 message = bot.format_internship(internship)
                 bot.send_message(message, link=link)
                 
