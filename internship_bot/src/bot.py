@@ -50,27 +50,22 @@ class TelegramBot:
         location = internship.get('location', 'N/A')
         stipend = internship.get('stipend', 'N/A')
         source = internship.get('source', 'Web')
-        
-    def format_internship(self, internship: dict) -> str:
-        """
-        Formats an internship dictionary into a Telegram HTML message.
-        """
-        title = internship.get('title', 'N/A')
-        company = internship.get('company', 'N/A')
-        location = internship.get('location', 'N/A')
-        stipend = internship.get('stipend', 'N/A')
-        source = internship.get('source', 'Web')
         date = internship.get('date', 'Recently')
+        country = internship.get('country', 'Global')
+        field = internship.get('field', 'Tech')
         
-        # SEO / Keywords formatting
+        # Premium / Clean Formatting
         return (
-            f"🚀 <b>Fresh Internship Alert!</b>\n\n"
-            f"👨‍💻 <b>Role:</b> {title}\n"
-            f"🏢 <b>Company:</b> {company}\n"
-            f"📍 <b>Location:</b> {location}\n"
-            f"💵 <b>Stipend:</b> {stipend}\n"
+            f"⚡ <b>New Opportunity!</b>\n\n"
+            f"💼 <b>{title}</b>\n"
+            f"🏢 <i>{company}</i>\n"
+            f"📍 {location} ({country})\n"
+            f"\n"
+            f"💰 <b>Stipend:</b> {stipend}\n"
             f"📅 <b>Posted:</b> {date}\n"
-            f"🌐 <b>Source:</b> {source}\n\n"
-            f"👇 <b>Apply Now:</b>\n"
-            f"<i>Don't miss out! #Internship #ComputerScience #{source.replace(' ', '')} #Hiring</i>"
+            f"🏷️ <b>Field:</b> {field}\n"
+            f"\n"
+            f"🔗 <a href='{internship.get('link')}'><b>Apply Now</b></a>\n"
+            f"\n"
+            f"#{field.replace(' ', '')} #Internship #{country.replace(' ', '')}"
         )
