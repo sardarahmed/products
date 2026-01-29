@@ -47,15 +47,53 @@ class Processor:
         elif any(x in title_lower for x in ['research', 'science', 'bio', 'chem']):
             field = "Research / Science"
         
-        # Country Extraction (Simplified)
+        # Country Extraction
         location = raw_data.get('location', 'Remote')
-        country = "Remote" # Default
-        if "US" in location or "USA" in location or "United States" in location: country = "USA"
-        elif "UK" in location or "United Kingdom" in location: country = "UK"
-        elif "Germany" in location: country = "Germany"
-        elif "France" in location: country = "France"
-        elif "India" in location: country = "India"
-        elif "Canada" in location: country = "Canada"
+        country = "Remote" 
+        
+        # Normalize location string for search
+        loc_lower = location.lower()
+        
+        # Mapping for Target Countries (EU, US, CA, AU)
+        # Priority: Exact code match or full name match
+        country_map = {
+            'united states': 'USA', 'usa': 'USA', 'us': 'USA',
+            'united kingdom': 'UK', 'uk': 'UK', 'great britain': 'UK', 'gb': 'UK', 'london': 'UK',
+            'canada': 'Canada', 'ca': 'Canada',
+            'australia': 'Australia', 'au': 'Australia',
+            'germany': 'Germany', 'de': 'Germany', 'berlin': 'Germany', 'munich': 'Germany',
+            'france': 'France', 'fr': 'France', 'paris': 'France',
+            'switzerland': 'Switzerland', 'ch': 'Switzerland', 'geneva': 'Switzerland', 'zurich': 'Switzerland',
+            'netherlands': 'Netherlands', 'nl': 'Netherlands', 'amsterdam': 'Netherlands',
+            'spain': 'Spain', 'es': 'Spain', 'madrid': 'Spain', 'barcelona': 'Spain',
+            'italy': 'Italy', 'it': 'Italy',
+            'sweden': 'Sweden', 'se': 'Sweden',
+            'ireland': 'Ireland', 'ie': 'Ireland', 'dublin': 'Ireland',
+            'austria': 'Austria', 'at': 'Austria',
+            'belgium': 'Belgium', 'be': 'Belgium',
+            'portugal': 'Portugal', 'pt': 'Portugal',
+            'poland': 'Poland', 'pl': 'Poland',
+            'denmark': 'Denmark', 'dk': 'Denmark',
+            'norway': 'Norway', 'no': 'Norway',
+            'finland': 'Finland', 'fi': 'Finland',
+            'india': 'India', 'in': 'India'
+        }
+        
+        # Check against map
+        # 1. Check for whole words to avoid partial matches (e.g. 'us' in 'industry')
+        import re
+        found = False
+        for key, val in country_map.items():
+            # Regex for "\bkey\b"
+            if re.search(r'\b' + re.escape(key) + r'\b', loc_lower):
+                country = val
+                found = True
+                break
+        
+        # Fallback if no specific country found but location isn't empty
+        if not found and location and location.lower() != "remote":
+             # Use the location text itself if it looks like a country (simple heuristic)
+             pass
 
         # Domain for Logo
         company_domain = raw_data.get('company', '').lower().replace(" ", "") + ".com" # Very naive, but functional fo clearbit often
