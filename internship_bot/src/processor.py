@@ -124,11 +124,29 @@ class Processor:
         current_data = self.load_data()
         current_ids = {item['id'] for item in current_data}
         
+        # Target Regions (Strict Filter)
+        # Note: 'Remote' is kept as it often applies to these regions.
+        ALLOWED_COUNTRIES = {
+            'USA', 'Canada', 'Australia', 'New Zealand', 
+            'UK', 'Germany', 'France', 'Switzerland', 'Netherlands', 'Spain', 
+            'Italy', 'Sweden', 'Ireland', 'Austria', 'Belgium', 'Portugal', 
+            'Poland', 'Denmark', 'Norway', 'Finland', 'Remote'
+        }
+        
         added_count = 0
         
         for raw in new_internships:
             normalized = self.normalize_internship(raw)
             
+            # STRICT FILTER: Discard if not in target regions
+            if normalized['country'] not in ALLOWED_COUNTRIES:
+                # Log explicitly if needed, but for now just skip
+                continue
+                
+            # Extra Safety: Explicitly exclude India if it somehow slipped through as 'Remote' but location says India
+            if "india" in normalized['location'].lower():
+                continue
+
             # Deduplication
             if normalized['id'] not in current_ids:
                 # Also check Apply Link uniqueness to be safe
