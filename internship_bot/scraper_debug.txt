@@ -1,0 +1,2 @@
+Scraper Initialized
+run_all called

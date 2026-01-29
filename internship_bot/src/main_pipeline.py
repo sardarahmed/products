@@ -7,7 +7,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from src.processor import Processor
-from src.scrapers_v2 import ContentScraper
+from src.scraper_engine import ContentScraper
 from src.poster import Poster
 
 # Configure logging
@@ -24,6 +24,8 @@ def main():
 
     # 2. Scrape Data
     logger.info("Step 1: Scraping...")
+    print(f"DEBUG: Scraper Type: {type(scraper)}")
+    print(f"DEBUG: Scraper Module: {scraper.__module__}")
     raw_data = scraper.run_all()
     logger.info(f"Scraped {len(raw_data)} potential internships.")
 
