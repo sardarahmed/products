@@ -3,3 +3,5 @@ beautifulsoup4==4.12.3
 python-telegram-bot==20.8
 sqlalchemy==2.0.25
 python-dateutil==2.8.2
+feedparser==6.0.10
+python-dotenv==1.0.0
