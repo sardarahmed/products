@@ -5,8 +5,10 @@ import time
 import logging
 import random
 from scrapers import InternshalaScraper, RemotiveScraper, RSSScraper, LinkedInScraper
-from storage import StorageManager
+from database import Database
 from bot import TelegramBot
+from filters import extract_country, classify_field
+from utils import parse_date
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -25,25 +27,21 @@ def main():
         logger.error("BOT_TOKEN and CHANNEL_ID environment variables are required.")
         return
 
-    # Determine path to history.json (in the parent directory of src)
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    history_file = os.path.join(base_dir, 'history.json')
-    
     # Initialize modules
-    storage = StorageManager(file_path=history_file)
+    db = Database()
     bot = TelegramBot(bot_token, channel_id)
 
     # Initialize Scrapers
     scrapers = [
-        LinkedInScraper(), # Prioritized as per user request
+        LinkedInScraper(),
         InternshalaScraper(),
         RemotiveScraper(),
         RSSScraper(url="https://weworkremotely.com/categories/remote-programming-jobs.rss", source_name="WeWorkRemotely"),
         RSSScraper(url="https://stackoverflow.com/jobs/feed", source_name="StackOverflow") 
     ]
 
-    # Run all scrapers and collect results by source
-    scraped_data = [] # List of lists
+    # Run all scrapers
+    scraped_data = []
     for scraper in scrapers:
         try:
             results = scraper.scrape()
@@ -53,59 +51,59 @@ def main():
         except Exception as e:
             logger.error(f"Scraper {scraper.__class__.__name__} failed: {e}")
 
-    # Round-robin interleave
+    # Flatten results
     import itertools
-    from utils import is_recent # Import here or top level
+    all_internships = [item for items in scraped_data for item in items]
 
-    interleaved = [item for items in itertools.zip_longest(*scraped_data) for item in items if item is not None]
-    
-    # Filter by date (Recent 30 days) - User allows old posted dates if available
-    filtered_internships = []
-    skipped_count = 0
-    for i in interleaved:
-        date_str = i.get('date', '')
-        # Relaxed 30-day window to allow older but active posts
-        # Most "live" lists on these sites are active.
-        if is_recent(date_str, days=30):
-            filtered_internships.append(i)
-        else:
-            skipped_count += 1
-            # logger.info(f"Skipping very old post: {i['title']} ({date_str})")
-
-    logger.info(f"Total unique recent internships: {len(filtered_internships)} (Skipped {skipped_count} old/unknown)")
-    
     new_count = 0
-    max_posts = 5  # UPDATED LIMIT
-    
-    for internship in filtered_internships:
-        if new_count >= max_posts:
-            logger.info(f"Reached limit of {max_posts} posts per run.")
-            break
+    max_broadcast_posts = 5 # Limit for channel broadcasting
+    processed_count = 0
 
-        link = internship.get('link')
-        if not link:
-            continue
+    for i in all_internships:
+        # Prepare data for DB
+        title = i.get('title', 'N/A')
+        location = i.get('location', 'Unknown')
+        
+        # Enrich data
+        country = extract_country(location)
+        field = classify_field(title)
+        
+        # Parse date
+        date_str = i.get('date', '')
+        date_obj = parse_date(date_str)
+        
+        internship_data = {
+            'title': title,
+            'company': i.get('company', 'N/A'),
+            'location': location,
+            'link': i.get('link'),
+            'date_obj': date_obj,
+            'source': i.get('source', 'Web'),
+            'country': country,
+            'field': field
+        }
 
-        if storage.is_new(link):
-            logger.info(f"New internship found: {internship['title']} at {internship['company']}")
+        # Add to Database
+        # Returns True if it matches unique constraint (link) and was added
+        is_new = db.add_internship(internship_data)
+        
+        if is_new:
+            logger.info(f"New internship saved: {title} ({country}, {field})")
             
-            if not args.dry_run:
-                message = bot.format_internship(internship)
-                bot.send_message(message, link=link)
+            # Broadcast to Channel (Limit to max_broadcast_posts per run for channel spam prevention)
+            if processed_count < max_broadcast_posts:
+                if not args.dry_run:
+                    message = bot.format_internship(i)
+                    bot.send_message(message, link=i.get('link'))
+                    time.sleep(3) # Rate limit protection
+                else:
+                     logger.info("[Dry Run] Would send to channel")
                 
-                storage.add(link)
+                processed_count += 1
                 new_count += 1
-                # Sleep to avoid hitting rate limits
-                time.sleep(3)
-            else:
-                logger.info("[Dry Run] Would send message and save to history.")
-                new_count += 1
-
-    if not args.dry_run:
-        storage.save_history()
-        logger.info("History saved.")
-
-    logger.info(f"Job completed. Processed {new_count} new internships.")
+        
+    logger.info(f"Job completed. Saved {new_count} new internships to DB. Broadcasted {processed_count}.")
 
 if __name__ == "__main__":
     main()
+
